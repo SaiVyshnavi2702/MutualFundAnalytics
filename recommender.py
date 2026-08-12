@@ -1,24 +1,22 @@
-import pandas as pd
+from pathlib import Path
+
 import numpy as np
-import os
+import pandas as pd
 
 
-BASE_PATH = r"D:\MutualFundAnalytics\data\processed"
+# Project paths
+PROJECT_ROOT = Path(__file__).resolve().parent
+DATA_PATH = PROJECT_ROOT / "data" / "processed"
+OUTPUT_PATH = PROJECT_ROOT / "fund_recommendations.csv"
 
 
 # Load datasets
 fund_master = pd.read_csv(
-    os.path.join(
-        BASE_PATH,
-        "01_fund_master_clean.csv"
-    )
+    DATA_PATH / "01_fund_master_clean.csv"
 )
 
 nav = pd.read_csv(
-    os.path.join(
-        BASE_PATH,
-        "02_nav_history_clean.csv"
-    )
+    DATA_PATH / "02_nav_history_clean.csv"
 )
 
 
@@ -29,23 +27,25 @@ nav = nav.sort_values(
     ["amfi_code", "date"]
 )
 
+
 # Calculate daily returns
 nav["daily_return"] = (
     nav.groupby("amfi_code")["nav"]
-       .pct_change()
+    .pct_change()
 )
 
 
 # Calculate Sharpe ratio for every fund
 scheme_sharpe = (
     nav.groupby("amfi_code")["daily_return"]
-       .agg(
-           mean_return="mean",
-           std_return="std"
-       )
-       .reset_index()
+    .agg(
+        mean_return="mean",
+        std_return="std"
+    )
+    .reset_index()
 )
 
+# Annualize using 252 trading days
 scheme_sharpe["sharpe_ratio"] = (
     scheme_sharpe["mean_return"]
     / scheme_sharpe["std_return"]
@@ -69,6 +69,19 @@ recommender_data = scheme_sharpe.merge(
 
 
 def recommend_funds(risk_appetite):
+    """
+    Recommend the top three funds for a given risk appetite.
+
+    Parameters
+    ----------
+    risk_appetite : str
+        Investor risk preference: Low, Moderate, or High.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Top three funds ranked by annualized Sharpe ratio.
+    """
 
     risk_appetite = (
         risk_appetite
@@ -86,12 +99,8 @@ def recommend_funds(risk_appetite):
         matching_risk = ["High", "Very High"]
 
     else:
-        print(
-            "Invalid risk appetite."
-        )
-        print(
-            "Please enter Low, Moderate, or High."
-        )
+        print("Invalid risk appetite.")
+        print("Please enter Low, Moderate, or High.")
         return pd.DataFrame()
 
     recommendations = (
@@ -130,6 +139,7 @@ if __name__ == "__main__":
     if not recommendations.empty:
 
         print("\nTop 3 Recommended Funds:")
+
         print(
             recommendations.to_string(
                 index=False
@@ -137,11 +147,11 @@ if __name__ == "__main__":
         )
 
         recommendations.to_csv(
-            "fund_recommendations.csv",
+            OUTPUT_PATH,
             index=False
         )
 
         print(
-            "\nRecommendation saved to "
-            "fund_recommendations.csv"
+            f"\nRecommendation saved to "
+            f"{OUTPUT_PATH}"
         )
