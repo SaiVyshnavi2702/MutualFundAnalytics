@@ -1,15 +1,18 @@
-import os
 import pandas as pd
+from pathlib import Path
 from sqlalchemy import create_engine
 
 print("=" * 60)
 print("LOADING CLEANED DATASETS INTO SQLITE")
 print("=" * 60)
 
-# SQLite Database
-engine = create_engine("sqlite:///bluestock_mf.db")
+# Project paths
+PROJECT_ROOT = Path(__file__).resolve().parent
+PROCESSED_FOLDER = PROJECT_ROOT / "data" / "processed"
+DB_PATH = PROJECT_ROOT / "bluestock_mf.db"
 
-processed_folder = "data/processed"
+# SQLite database
+engine = create_engine(f"sqlite:///{DB_PATH}")
 
 datasets = [
     "01_fund_master_clean.csv",
@@ -24,15 +27,23 @@ datasets = [
     "10_benchmark_indices_clean.csv"
 ]
 
-for file in datasets:
+for file_name in datasets:
 
-    path = os.path.join(processed_folder, file)
+    path = PROCESSED_FOLDER / file_name
+
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Processed dataset not found: {path}"
+        )
 
     df = pd.read_csv(path)
 
-    table_name = file.replace("_clean.csv", "").replace(".csv", "")
+    table_name = file_name.replace("_clean.csv", "")
 
-    print(f"\nLoading {file}")
+    print(f"\nLoading {file_name}")
+    print(f"Table Name : {table_name}")
+    print(f"Rows       : {len(df)}")
+    print(f"Columns    : {len(df.columns)}")
 
     df.to_sql(
         table_name,
@@ -43,8 +54,6 @@ for file in datasets:
 
     print(f"Table Created : {table_name}")
 
-    print(f"Rows Loaded : {len(df)}")
-
 print("\n" + "=" * 60)
-print("ALL DATASETS LOADED SUCCESSFULLY")
+print("ALL 10 CLEANED DATASETS LOADED SUCCESSFULLY")
 print("=" * 60)
