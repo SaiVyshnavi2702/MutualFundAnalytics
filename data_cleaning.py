@@ -68,11 +68,54 @@ for file in datasets:
             errors="coerce"
         )
 
+
+        df = df.dropna(subset=["date"])
+        df = df[df["nav"] > 0]
+
+
         df = df.sort_values(
             ["amfi_code", "date"]
         )
 
-        df["nav"] = df.groupby("amfi_code")["nav"].ffill()
+
+        expanded = []
+
+        for amfi_code, group in df.groupby("amfi_code"):
+
+            group = group.sort_values("date").copy()
+
+            full_dates = pd.date_range(
+                start=group["date"].min(),
+                end=group["date"].max(),
+                freq="D"
+            )
+
+            group = (
+                group
+                .set_index("date")
+                .reindex(full_dates)
+            )
+
+            group["amfi_code"] = amfi_code
+
+            # Forward-fill the most recent available NAV
+            # across weekends and market holidays.
+            group["nav"] = group["nav"].ffill()
+
+            group.index.name = "date"
+
+            expanded.append(
+                group.reset_index()
+            )
+
+        df = pd.concat(
+            expanded,
+            ignore_index=True
+        )
+
+        df = df[
+            ["amfi_code", "date", "nav"]
+        ]
 
         df = df[df["nav"] > 0]
 

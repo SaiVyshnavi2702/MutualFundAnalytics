@@ -27,3 +27,5 @@ python_backup/
 # OS files
 .DS_Store
 Thumbs.db
+data_cleaning_backup_before_nav_fix.py
+notebooks/Performance_Analytics_backup_before_cagr_fix.ipynb
